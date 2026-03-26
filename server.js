@@ -19,7 +19,7 @@ app.post('/create-checkout-session', async (req, res) => {
     }],
     mode: 'payment',
     // These redirect the user back to your GitHub site after payment
-    success_url: 'https://microburstmedia.github.io/success-thank-you-page/',
+    success_url: 'https://microburstmedia.github.io/success-thank-you-page',
     cancel_url: 'https://microburstmedia.github.io/digital-marketing-network/',
   });
 
