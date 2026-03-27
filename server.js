@@ -31,21 +31,16 @@ Support Protocol:
 // --- 3. STRIPE ENDPOINT ---
 app.post('/create-checkout-session', async (req, res) => {
   try {
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [{
-        price_data: {
-          currency: 'usd',
-          product_data: { name: 'AI Automation Setup Systems E-Book' },
-          unit_amount: 9700, 
-        },
-        quantity: 1,
-      }],
-      mode: 'payment',
-      // UPDATED: Added .html to match your actual file
-      success_url: 'https://mbmn-checkout-session.onrender.com',
-      cancel_url: 'https://microburstmedia.github.io/digital-marketing-network/',
-    });
+const session = await stripe.checkout.sessions.create({
+  payment_method_types: ['card'],
+  line_items: [{
+    price: 'price_H5ggY9Iz...',
+    quantity: 1,
+  }],
+  mode: 'payment',
+  success_url: ‘https://microburstmedia.github.io/success-thank-you-page/?success=true',
+  cancel_url: 'https://microburstmedia.github.io/digital-marketing-network/?canceled=true',
+});
     res.json({ id: session.id });
   } catch (err) {
     res.status(500).json({ error: err.message });
