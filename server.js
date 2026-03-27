@@ -13,8 +13,8 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // --- 2. KNOWLEDGE BASE ---
 const systemInstruction = `
-Role: Lead AI Strategist & IT Consultant for MicroBurstMedia (MBMN).
-Tone: Professional, expert, adaptive, and efficient.
+Role: Lead AI Support Representative & IT Consultant for MicroBurstMedia (MBMN).
+Tone: Professional, feeler, entertainer, thinker, expert, adaptive, efficient, and director.
 
 Knowledge Base:
 - Core Strategy: The "Interlink" method—a proprietary strategy for automating web traffic and revenue.
@@ -49,29 +49,35 @@ app.post('/create-checkout-session', async (req, res) => {
 
 // --- 4. CHATBOT ENDPOINT (Hybrid Logic) ---
 app.post('/chat', async (req, res) => {
+    const { message } = req.body;
+    const scriptUrl = 'https://script.google.com/macros/s/AKfycbyA6OpUvs_Dqx5mnTH2HMmTWwz6-VM_KkdTFmQEI64DsKnvYAFpch0424Ye-u1iLIOWXA/exec'; // Update this!
+
+    let sheetReply = null;
+
+    // 1. TRY THE SHEET FIRST
     try {
-        const { message } = req.body;
-        const scriptUrl = 'https://script.google.com/macros/s/AKfycbyA6OpUvs_Dqx5mnTH2HMmTWwz6-VM_KkdTFmQEI64DsKnvYAFpch0424Ye-u1iLIOWXA/exec';
+        const sheetResponse = await axios.post(scriptUrl, { message: message }, { timeout: 5000 });
+        sheetReply = sheetResponse.data.reply;
+    } catch (sheetError) {
+        console.error("Sheet Connection Failed, bypassing to Gemini...");
+    }
 
-        // 1. CALL THE "OPERATOR" (Google Sheets) FIRST
-        const sheetResponse = await axios.post(scriptUrl, { message: message });
-        const sheetReply = sheetResponse.data.reply;
+    // 2. IF SHEET FOUND A MATCH (And isn't the "out of scope" message)
+    if (sheetReply && !sheetReply.includes("out of my scope of support")) {
+        return res.json({ reply: sheetReply });
+    }
 
-        // 2. CHECK IF THE SHEET GAVE A VALID RESPONSE
-        // Note: Make sure this check matches the "No match" phrase in your Google Apps Script
-        if (sheetReply && !sheetReply.includes("out of my scope of support")) { return res.json({ reply: sheetReply }); }
-
-        // 3. IF NO SHEET MATCH, USE GEMINI AS THE BACKUP
+    // 3. FALLBACK TO GEMINI (Runs if sheet is down OR no match found)
+    try {
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const prompt = `${systemInstruction}\n\nUser Message: ${message}`;
         const result = await model.generateContent(prompt);
         const response = await result.response;
         
         res.json({ reply: response.text() });
-
-    } catch (err) {
-        console.error("System Error:", err.message);
-        res.status(500).json({ reply: "The system is currently busy. Please try again in a moment." });
+    } catch (aiError) {
+        console.error("Gemini Error:", aiError.message);
+        res.status(500).json({ reply: "The chat support line is currently unavailable. Please contact support at +1 (954) 600-8695, M-F from 9AM to 6PM." });
     }
 });
 
