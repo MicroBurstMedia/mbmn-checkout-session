@@ -1,14 +1,19 @@
 {
   "name": "mbm-stripe-server",
   "version": "1.0.1",
+  "description": "MBMN AI Automation and Stripe Server",
   "main": "server.js",
   "dependencies": {
     "express": "^4.18.2",
     "stripe": "^12.0.0",
     "cors": "^2.8.5",
+    "axios": "^1.4.0",
     "@google/generative-ai": "^0.1.0"
   },
-"scripts": {
-  "start": "node package.json"
-}
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   }
+}
