@@ -27,19 +27,32 @@ app.post('/create-checkout-session', async (req, res) => {
 });
 
 // --- CHATBOT ENDPOINT ---
+
 app.post('/chat', async (req, res) => {
     try {
         const { message } = req.body;
-        
-        // Replace this with your actual Google Apps Script Web App URL
         const scriptUrl = 'https://script.google.com/macros/s/AKfycbyA6OpUvs_Dqx5mnTH2HMmTWwz6-VM_KkdTFmQEI64DsKnvYAFpch0424Ye-u1iLIOWXA/exec';
 
-        const response = await axios.post(scriptUrl, { message: message });
+        // 1. CALL THE "OPERATOR" (Google Sheets) FIRST
+        const sheetResponse = await axios.post(scriptUrl, { message: message });
+        const sheetReply = sheetResponse.data.reply;
+
+        // 2. CHECK IF THE SHEET GAVE A DEFAULT/ERROR RESPONSE
+        // (Make sure this matches the "defaultResponse" in your Apps Script)
+        if (sheetReply && !sheetReply.includes("I'm not sure about that")) {
+            return res.json({ reply: sheetReply });
+        }
+
+        // 3. IF NO SHEET MATCH, USE GEMINI AS THE BACKUP
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const prompt = `${systemInstruction}\n\nUser Message: ${message}`;
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
         
-        res.json({ reply: response.data.reply });
+        res.json({ reply: response.text() });
+
     } catch (err) {
-        res.status(500).json({ reply: "The operator is busy. Please try again." });
+        console.error("System Error:", err.message);
+        res.status(500).json({ reply: "Systems are currently recalibrating. Please try again." });
     }
 });
-
-app.listen(3000, () => console.log('Server running on port 3000'));
