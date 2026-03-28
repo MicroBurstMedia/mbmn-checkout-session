@@ -47,39 +47,37 @@ app.post('/create-checkout-session', async (req, res) => {
 });
 
 // --- 4. CHATBOT ENDPOINT (Safe-Relay Logic) ---
-app.post('/chat', async (req, res) => { 
-    const { message } = req.body; 
-    
-    // THE URL MUST BE ON ITS OWN LINE
-    const scriptUrl = 'https://script.google.com/macros/s/AKfycbzYsW53JScMQ1lpe0Jfax7MzylYVXu0MypvBghtPHMSPEBraYMrpy2X4M0P-NcDkWVn/exec';
+const express = require('express');
+const app = express();
+const cors = require('cors');
+const axios = require('axios');
 
-    let sheetReply = null;
+app.use(express.json());
+app.use(cors());
 
-    // 1. Try the Sheet first
+// --- THE BRIDGE ---
+app.post('/chat', async (req, res) => {
     try {
-        const sheetResponse = await axios.post(scriptUrl, { message: message }, { timeout: 4000 });
-        sheetReply = sheetResponse.data.reply;
-    } catch (sheetError) {
-        console.warn("Sheet unreachable or timed out, skipping to Gemini...");
-    }
+        const { message } = req.body;
+        
+        // YOUR NEW WEB APP URL FROM GOOGLE
+        const scriptUrl = 'https://script.google.com/macros/s/AKfycbzYsW53JScMQ1lpe0Jfax7MzylYVXu0MypvBghtPHMSPEBraYMrpy2X4M0P-NcDkWVn/exec';
 
-    // 2. If the sheet gave a real answer
-    if (sheetReply && !sheetReply.includes("out of my scope of support")) {
-        return res.json({ reply: sheetReply });
-    }
+        console.log("Sending message to Sheets:", message);
 
-    // 3. Fallback to Gemini AI
-    try {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const prompt = `${systemInstruction}\n\nUser Message: ${message}`;
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        res.json({ reply: response.text() });
-    } catch (aiError) {
-        console.error("AI Error:", aiError.message);
-        res.status(500).json({ reply: "The MBM strategist is currently recalibrating. Please try again in a moment." });
+        const response = await axios.post(scriptUrl, { message: message }, { timeout: 8000 });
+        
+        console.log("Sheets responded with:", response.data);
+        res.json({ reply: response.data.reply });
+
+    } catch (err) {
+        console.error("Connection Error Details:", err.message);
+        res.status(500).json({ reply: "The Bridge is down. Check Render Logs." });
     }
 });
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`MBMN Bridge Active on Port ${PORT}`));
 
 // --- 5. SERVER START (Crucial Ignition Lines) ---
 const PORT = process.env.PORT || 3000;
