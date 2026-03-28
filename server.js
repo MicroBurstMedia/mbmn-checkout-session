@@ -47,27 +47,28 @@ app.post('/create-checkout-session', async (req, res) => {
 });
 
 // --- 4. CHATBOT ENDPOINT (Safe-Relay Logic) ---
-app.post('/chat', async (req, res) => {
-    const { message } = req.body;
-    // CRITICAL: Replace this with your NEW Google Script URL from the "Deploy" button
-    const scriptUrl = 'https://script.google.com/macros/s/AKfycbyA6OpUvs_Dqx5mnTH2HMmTWwz6-VM_KkdTFmQEI64DsKnvYAFpch0424Ye-u1iLIOWXA/exec';
+app.post('/chat', async (req, res) => { 
+    const { message } = req.body; 
+    
+    // THE URL MUST BE ON ITS OWN LINE
+    const scriptUrl = 'https://script.google.com/macros/s/AKfycbzYsW53JScMQ1lpe0Jfax7MzylYVXu0MypvBghtPHMSPEBraYMrpy2X4M0P-NcDkWVn/exec';
 
     let sheetReply = null;
 
-    // 1. Try the Sheet first, but don't let it crash the whole server if it fails
+    // 1. Try the Sheet first
     try {
         const sheetResponse = await axios.post(scriptUrl, { message: message }, { timeout: 4000 });
         sheetReply = sheetResponse.data.reply;
     } catch (sheetError) {
-        console.warn("Sheet unreachable, skipping to Gemini...");
+        console.warn("Sheet unreachable or timed out, skipping to Gemini...");
     }
 
-    // 2. If the sheet gave a real answer (not the default 'out of scope' message)
+    // 2. If the sheet gave a real answer
     if (sheetReply && !sheetReply.includes("out of my scope of support")) {
         return res.json({ reply: sheetReply });
     }
 
-    // 3. Fallback to Gemini AI if Sheet fails or has no answer
+    // 3. Fallback to Gemini AI
     try {
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const prompt = `${systemInstruction}\n\nUser Message: ${message}`;
